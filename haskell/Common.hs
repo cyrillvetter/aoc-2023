@@ -9,6 +9,15 @@ ints = map read
 integers :: [String] -> [Integer]
 integers = map read
 
+fst3 :: (a, b, c) -> a
+fst3 (a, _, _) = a
+
+snd3 :: (a, b, c) -> b
+snd3 (_, b, _) = b
+
+trd3 :: (a, b, c) -> c
+trd3 (_, _, c) = c
+
 allUnique :: Ord a => [a] -> Bool
 allUnique [] = True
 allUnique list = length list == length (S.fromList list)
