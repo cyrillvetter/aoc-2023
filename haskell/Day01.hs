@@ -15,6 +15,6 @@ replaceLetters :: [String] -> String
 replaceLetters [""] = ""
 replaceLetters (w:ws)
     | isDigit (head w) = head w : replaceLetters ws
-    | otherwise = case snd <$> find ((`isPrefixOf` w) . fst) nums of
-        Just c -> c : replaceLetters ws
+    | otherwise = case find ((`isPrefixOf` w) . fst) nums of
+        Just (_, c) -> c : replaceLetters ws
         Nothing -> replaceLetters ws
