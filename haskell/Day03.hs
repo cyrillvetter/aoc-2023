@@ -1,53 +1,42 @@
 import Data.Char (isDigit)
 import Data.List (nub)
 import qualified Data.Map as M
-import Debug.Trace (trace)
 
 type Point = (Int, Int)
 
+neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+
 main = do
     input <- createGrid . lines <$> readFile "inputs/3.txt"
-    print $ countEngineNumbers input
-    print $ countGearNumbers input
-    print "Day 3"
+    let grid = M.fromList input
+    print $ countEngineNumbers grid input
+    print $ countGearNumbers grid input
 
-countEngineNumbers :: [(Point, Char)] -> Int
-countEngineNumbers p = sum $ compute symbols
-    where grid = M.fromList p
-          symbols = map fst $ filter (\(_, c) -> c /= '.' && not (isDigit c)) p
-          compute :: [Point] -> [Int]
-          compute [] = []
-          compute (x:xs) = nums ++ compute xs
-              where neighbours = filter (\n -> isDigit (grid M.! n)) $ getNeighbours x
-                    nums = nub $ map (getSurroundingNum grid) neighbours
+countEngineNumbers :: M.Map Point Char -> [(Point, Char)] -> Int
+countEngineNumbers grid p = sum $ concat $ getSurroundingNumbers symbols grid
+    where symbols = map fst $ filter (\(_, c) -> c /= '.' && not (isDigit c)) p
 
-countGearNumbers :: [(Point, Char)] -> Int
-countGearNumbers p = sum $ compute symbols
-    where grid = M.fromList p
-          symbols = map fst $ filter (\(_, c) -> c == '*') p
-          compute :: [Point] -> [Int]
-          compute [] = []
-          compute (x:xs)
-              | length nums == 2 = product nums : compute xs
-              | otherwise = compute xs
-              where neighbours = filter (\n -> isDigit (grid M.! n)) $ getNeighbours x
-                    nums = nub $ map (getSurroundingNum grid) neighbours
+countGearNumbers :: M.Map Point Char -> [(Point, Char)] -> Int
+countGearNumbers grid p = sum $ map product $ filter ((== 2) . length) $ getSurroundingNumbers gears grid
+    where gears = map fst $ filter (\(_, c) -> c == '*') p
 
-getSurroundingNum :: M.Map Point Char -> Point -> Int
-getSurroundingNum grid start@(sx, sy) = read $ fromLeft ++ startVal ++ fromRight
+getSurroundingNumbers :: [Point] -> M.Map Point Char -> [[Int]]
+getSurroundingNumbers [] _ = []
+getSurroundingNumbers (x:xs) grid = nums : getSurroundingNumbers xs grid
+    where neighbours = filter (\n -> isDigit (grid M.! n)) $ getNeighbours x
+          nums = nub $ map (getNumber grid) neighbours
+
+getNumber :: M.Map Point Char -> Point -> Int
+getNumber grid (sx, sy) = read $ reverse (move (-1) sx) ++ move 1 (sx + 1)
     where
-        startVal = [grid M.! start]
-        fromLeft = reverse $ move (-1) (sx - 1, sy)
-        fromRight = move 1 (sx + 1, sy)
-        move :: Int -> Point -> String
-        move step curr@(x, y)
-            | not (isInBound curr) = ""
-            | not (isDigit val) = ""
-            | otherwise = val : move step (x + step, y)
-            where val = grid M.! curr
+        move :: Int -> Int -> String
+        move step x
+            | not (isInBound (x, sy) && isDigit val) = ""
+            | otherwise = val : move step (x + step)
+            where val = grid M.! (x, sy)
 
 getNeighbours :: Point -> [Point]
-getNeighbours (x, y) = filter isInBound [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1), (x - 1, y - 1), (x + 1, y - 1), (x - 1, y + 1), (x + 1, y + 1)]
+getNeighbours (x, y) = filter isInBound $ map (\(nx, ny) -> (x + nx, y + ny)) neighbours
 
 isInBound :: Point -> Bool
 isInBound (x, y) = x >= 0 && y >= 0 && x < 140 && y < 140
