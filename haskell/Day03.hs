@@ -4,7 +4,7 @@ import qualified Data.Map as M
 
 type Point = (Int, Int)
 
-neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+adjacent = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
 
 main = do
     input <- createGrid . lines <$> readFile "inputs/3.txt"
@@ -13,21 +13,20 @@ main = do
     print $ countGearNumbers grid input
 
 countEngineNumbers :: M.Map Point Char -> [(Point, Char)] -> Int
-countEngineNumbers grid p = sum $ concat $ getSurroundingNumbers symbols grid
+countEngineNumbers grid p = sum $ concatMap (getAdjNumbers grid) symbols
     where symbols = map fst $ filter (\(_, c) -> c /= '.' && not (isDigit c)) p
 
 countGearNumbers :: M.Map Point Char -> [(Point, Char)] -> Int
-countGearNumbers grid p = sum $ map product $ filter ((== 2) . length) $ getSurroundingNumbers gears grid
-    where gears = map fst $ filter (\(_, c) -> c == '*') p
+countGearNumbers grid p = sum $ map product $ filter ((== 2) . length) gearNums
+    where gearNums = map (getAdjNumbers grid . fst) $ filter (\(_, c) -> c == '*') p
 
-getSurroundingNumbers :: [Point] -> M.Map Point Char -> [[Int]]
-getSurroundingNumbers [] _ = []
-getSurroundingNumbers (x:xs) grid = nums : getSurroundingNumbers xs grid
-    where neighbours = filter (\n -> isDigit (grid M.! n)) $ getNeighbours x
-          nums = nub $ map (getNumber grid) neighbours
+getAdjNumbers :: M.Map Point Char -> Point -> [Int]
+getAdjNumbers grid p = nums
+    where adj = filter (\n -> isDigit (grid M.! n)) $ getAdjacent p
+          nums = nub $ map (buildNumber grid) adj
 
-getNumber :: M.Map Point Char -> Point -> Int
-getNumber grid (sx, sy) = read $ reverse (move (-1) sx) ++ move 1 (sx + 1)
+buildNumber :: M.Map Point Char -> Point -> Int
+buildNumber grid (sx, sy) = read $ reverse (move (-1) sx) ++ move 1 (sx + 1)
     where
         move :: Int -> Int -> String
         move step x
@@ -35,8 +34,8 @@ getNumber grid (sx, sy) = read $ reverse (move (-1) sx) ++ move 1 (sx + 1)
             | otherwise = val : move step (x + step)
             where val = grid M.! (x, sy)
 
-getNeighbours :: Point -> [Point]
-getNeighbours (x, y) = filter isInBound $ map (\(nx, ny) -> (x + nx, y + ny)) neighbours
+getAdjacent :: Point -> [Point]
+getAdjacent (x, y) = filter isInBound $ map (\(nx, ny) -> (x + nx, y + ny)) adjacent
 
 isInBound :: Point -> Bool
 isInBound (x, y) = x >= 0 && y >= 0 && x < 140 && y < 140
