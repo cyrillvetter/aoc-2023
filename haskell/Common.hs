@@ -18,6 +18,9 @@ snd3 (_, b, _) = b
 trd3 :: (a, b, c) -> c
 trd3 (_, _, c) = c
 
+count :: (a -> Bool) -> [a] -> Int
+count f = length . filter f
+
 allUnique :: Ord a => [a] -> Bool
 allUnique [] = True
 allUnique list = length list == length (S.fromList list)
