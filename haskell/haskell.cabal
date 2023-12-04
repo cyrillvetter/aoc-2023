@@ -14,25 +14,33 @@ common day
         binary,
         split
     default-language: Haskell2010
-    other-modules: Common
+    other-modules:    Common
 
 library
-    exposed-modules: Common
-    build-depends: base>=4.17, containers
+    exposed-modules:  Common
+    build-depends:    base>=4.17, containers
     default-language: Haskell2010
 
 executable load
-    main-is: Downloader.hs
-    build-depends: base, containers, bytestring, directory, filepath, http-conduit, http-types
+    main-is:          Downloader.hs
+    build-depends:    base, containers, bytestring, directory, filepath, http-conduit, http-types
 
 executable 01
-    import: day
+    import:  day
     main-is: Day01.hs
 
 executable 02
-    import: day
+    import:  day
     main-is: Day02.hs
 
 executable 03
-    import: day
+    import:  day
     main-is: Day03.hs
+
+executable 04
+    import:  day
+    main-is: Day04.hs
+
+executable 05
+    import:  day
+    main-is: Day05.hs
