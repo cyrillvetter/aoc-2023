@@ -4,29 +4,22 @@ type Mapping = (Int, Int, Int)
 
 main = do
     input <- splitOn "\n\n" <$> readFile "inputs/5.txt"
-    let seeds = parseSeeds $ head input
-        maps = map parseMap $ drop 1 input
-        seedRanges = map (\[a, b] -> (a, a + b)) $ chunksOf 2 seeds
-    print $ minimum $ map (`mapToLocation` maps) seeds
-    print $ minimum $ concatMap (\(from, to) -> mapAll from to maps) seedRanges -- ~3min execution time
+    let seeds = map read $ words $ last $ splitOn ": " $ head input
+        maps = map parseMapping $ drop 1 input
 
-mapToLocation :: Int -> [[Mapping]] -> Int
-mapToLocation curr [] = curr
-mapToLocation curr (m:ms) = mapToLocation (check m) ms
-    where
-        check :: [Mapping] -> Int
-        check [] = curr
-        check ((dest, source, range):xs)
-            | curr >= source && curr < (source + range) = (curr - source) + dest
-            | otherwise = check xs
+    print $ minimum $ map (flip (foldl sourceToDest) maps) seeds
+    print $ minimum $ concatMap (\[from, to] -> mapSeedRange from (from + to) maps) $ chunksOf 2 seeds -- ~3min execution time ):
 
-mapAll :: Int -> Int -> [[Mapping]] -> [Int]
-mapAll curr to maps
+sourceToDest :: Int -> [Mapping] -> Int
+sourceToDest curr [] = curr
+sourceToDest curr ((dest, source, range):xs)
+    | curr >= source && curr < (source + range) = (curr - source) + dest
+    | otherwise = sourceToDest curr xs
+
+mapSeedRange :: Int -> Int -> [[Mapping]] -> [Int]
+mapSeedRange curr to maps
     | curr == to = []
-    | otherwise = mapToLocation curr maps : mapAll (curr + 1) to maps
+    | otherwise = foldl sourceToDest curr maps : mapSeedRange (curr + 1) to maps
 
-parseMap :: String -> [Mapping]
-parseMap l = map ((\[a, b, c] -> (read a, read b, read c)) . words) $ drop 1 $ lines l
-
-parseSeeds :: String -> [Int]
-parseSeeds = map read . words . last . splitOn ": "
+parseMapping :: String -> [Mapping]
+parseMapping = map ((\[a, b, c] -> (a, b, c)) . map read . words) . drop 1 . lines
