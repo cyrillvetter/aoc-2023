@@ -18,6 +18,9 @@ snd3 (_, b, _) = b
 trd3 :: (a, b, c) -> c
 trd3 (_, _, c) = c
 
+toTuple :: [a] -> (a, a)
+toTuple [x, y] = (x, y)
+
 count :: (a -> Bool) -> [a] -> Int
 count f = length . filter f
 
