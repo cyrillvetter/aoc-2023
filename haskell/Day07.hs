@@ -1,43 +1,40 @@
 import Data.List (sort, sortBy, sortOn, group)
 import qualified Data.Map as M
-import Common (toTuple)
-import Debug.Trace (trace)
 
-strengths = M.fromList [('A', 12), ('K', 11), ('Q', 10), ('J', 9), ('T', 8), ('9', 7), ('8', 6), ('7', 5), ('6', 4), ('5', 3), ('4', 2), ('3', 1), ('2', 0)]
+strengths = M.fromList $ zip "AKQJT98765432" [12,11..]
+jokerStrengths = M.fromList $ zip "AKQT98765432J" [12,11..]
+
+type Hand = (String, Int, Int, [Int])
 
 main = do
-    input <- map (toTuple . words) . lines <$> readFile "inputs/7.txt"
-    let sorted = map (read . snd) $ sortBy (\(a, _) (b, _) -> cmp a b) input
-    print $ sum $ zipWith (*) [1..] sorted
+    input <- map words . lines <$> readFile "inputs/7.txt"
+    let handTypes = map (\[h, b] -> (h, read b, getHandType h, map (strengths M.!) h)) input
+        jokerHandTypes = map (\[h, b] -> (h, read b, getJokerHandType h, map (jokerStrengths M.!) h)) input
 
-cmp :: String -> String -> Ordering
-cmp x y
-    | primary == EQ = secondaryCompare x y
+    print $ calcTotalWinnings handTypes
+    print $ calcTotalWinnings jokerHandTypes
+
+calcTotalWinnings :: [Hand] -> Int
+calcTotalWinnings s = sum $ zipWith (*) [1..] $ map (\(_, b, _, _) -> b) $ sortBy compareHand s
+
+compareHand :: Hand -> Hand -> Ordering
+compareHand (_, _, t1, s1) (_, _, t2, s2)
+    | primary == EQ = compare s1 s2
     | otherwise = primary
-    where xt = getType x
-          yt = getType y
-          primary = compare xt yt
+    where primary = compare t1 t2
 
-getType :: String -> Int
-getType c
-    | amt == 1 = 6
-    | amt == 2 && length first == 1 = 5
-    | amt == 2 && length first == 2 = 4
-    | amt == 3 && length first == 1 && length second == 1 = 3
-    | amt == 3 && length first == 1 && length second == 2 = 2
-    | amt == 4 && length fourth == 2 = 1
-    | otherwise = 0
-    where grp = sortOn length $ group $ sort c
-          amt = length grp
-          first = head grp
-          second = grp !! 1
-          third = grp !! 2
-          fourth = grp !! 3
+getHandType :: String -> Int
+getHandType s = case sort $ map length $ group $ sort s of
+    [5]          -> 6
+    [1, 4]       -> 5
+    [2, 3]       -> 4
+    [1, 1, 3]    -> 3
+    [1, 2, 2]    -> 2
+    [1, 1, 1, 2] -> 1
+    _            -> 0
 
-secondaryCompare :: String -> String -> Ordering
-secondaryCompare (x:xs) (y:ys)
-    | cmp == EQ = secondaryCompare xs ys
-    | otherwise = cmp
-    where xStren = strengths M.! x
-          yStren = strengths M.! y
-          cmp = xStren `compare` yStren
+getJokerHandType :: String -> Int
+getJokerHandType s
+    | s == "JJJJJ" = 6
+    | otherwise = getHandType $ map (\c -> if c == 'J' then mostCommon else c) s
+    where mostCommon = head $ last $ sortOn length $ group $ sort $ filter (/= 'J') s
