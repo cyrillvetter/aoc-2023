@@ -1,7 +1,7 @@
 import Data.List (transpose)
 
 main = do
-    input <- map (drop 1 . words) . lines <$> readFile "inputs/6.txt"
+    input <- map (tail . words) . lines <$> readFile "inputs/6.txt"
     print $ product $ map (countRecords . map read) $ transpose input
     print $ countRecords $ map (read . concat) input
 
