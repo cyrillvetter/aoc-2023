@@ -1,16 +1,7 @@
-import Common (windowsOf)
-
 main = do
-    input <- map (map read . words) . lines <$> readFile "inputs/9.txt"
-    print $ sum $ map processRight input
-    print $ sum $ map processLeft input
+    history <- map (genHistory . map read . words) . lines <$> readFile "inputs/9.txt"
+    print $ sum $ map (foldr (\h v -> v + last h) 0) history
+    print $ sum $ map (foldr (\h v -> head h - v) 0) history
 
-processRight :: [Int] -> Int
-processRight nums
-    | all (== 0) nums = 0
-    | otherwise = last nums + processRight (map (\[a, b] -> b - a) $ windowsOf 2 nums)
-
-processLeft :: [Int] -> Int
-processLeft nums
-    | all (== 0) nums = 0
-    | otherwise = head nums - processLeft (map (\[a, b] -> b - a) $ windowsOf 2 nums)
+genHistory :: [Int] -> [[Int]]
+genHistory = takeWhile (any (/= 0)) . iterate (\l -> zipWith (-) (tail l) l)
