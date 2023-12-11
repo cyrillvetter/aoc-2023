@@ -1,6 +1,6 @@
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Data.List (intercalate, transpose)
+import Data.List (transpose)
 
 type Point = (Int, Int)
 
@@ -9,19 +9,47 @@ down = (0, 1)
 left = (-1, 0)
 right = (1, 0)
 
+neighbours = [up, down, left, right]
+
 main = do
-    -- input <- createGrid . lines <$> readFile "inputs/10.txt"
-    input <- lines <$> readFile "inputs/10.txt"
+    input <- scale . lines <$> readFile "inputs/10.txt"
     let grid = createGrid input
+        width = length (head input)
+        height = length input
         pipeMap = M.fromList grid
         start = fst $ head $ filter ((== 'S') . snd) grid
-        startNeighbourPipes = map (addPoints start) [up, right, down, left]
+        startNeighbourPipes = filter (\p -> isInBound p width height) $ map (addPoints start) neighbours
         connectedPipe = head $ filter (\p -> start `elem` getNeighbours p (pipeMap M.! p)) startNeighbourPipes
-        notConnectedPipe = head $ filter (\p -> start `notElem` getNeighbours p (pipeMap M.! p)) startNeighbourPipes
+        loopPath = getMainLoop start connectedPipe pipeMap (S.singleton start)
+        floodedElements = floodFill [(0, 0)] width height loopPath
+        inner = filter (\(p, c) -> p `S.notMember` floodedElements) grid
 
-    print notConnectedPipe
-    print $ getMainLoop start connectedPipe 0 pipeMap
-    putStrLn $ intercalate "\n" $ scale input
+    print $ S.size loopPath `div` 4
+    print $ (`countElements` 0) $ map fst inner
+
+countElements :: [Point] -> Int -> Int
+countElements [] count = count
+countElements ((x, y):ps) count = countElements ps val
+    where val = if odd x && odd y then count + 1 else count
+
+floodFill :: [Point] -> Int -> Int -> S.Set Point -> S.Set Point
+floodFill [] _ _ visited = visited
+floodFill (p:ps) width height visited = floodFill (n ++ ps) width height (S.insert p visited)
+    where n = filter (\e -> isInBound e width height && e `S.notMember` visited) $ map (addPoints p) neighbours
+
+isInBound :: Point -> Int -> Int -> Bool
+isInBound (x, y) width height = x >= 0 && y >= 0 && x < width && y < height
+
+getMainLoop :: Point -> Point -> M.Map Point Char -> S.Set Point -> S.Set Point
+getMainLoop prev curr pipes visited
+    | currPipe == 'S' = visited
+    | otherwise = getMainLoop curr next pipes (S.insert curr visited)
+    where currPipe = pipes M.! curr
+          test = filter (/= prev) $ getNeighbours curr currPipe
+          next = head test
+
+getNeighbours :: Point -> Char -> [Point]
+getNeighbours curr = map (addPoints curr) . getConnectingPipes
 
 scale :: [[Char]] -> [[Char]]
 scale = transpose . map (addBefore upReplace) . transpose . map (addBefore leftReplace)
@@ -37,17 +65,8 @@ upReplace c
 leftReplace :: Char -> Char
 leftReplace c
     | c == '-' || c == 'J' || c == '7' = '-'
+    | c == 'S' = '-'
     | otherwise = '.'
-
-getMainLoop :: Point -> Point -> Int -> M.Map Point Char -> Int
-getMainLoop prev curr steps pipes
-    | currPipe == 'S' = (steps `div` 2) + 1
-    | otherwise = getMainLoop curr next (steps + 1) pipes
-    where currPipe = pipes M.! curr
-          next = head $ filter (/= prev) $ getNeighbours curr currPipe
-
-getNeighbours :: Point -> Char -> [Point]
-getNeighbours curr = map (addPoints curr) . getConnectingPipes
 
 getConnectingPipes :: Char -> [Point]
 getConnectingPipes '|' = [up, down]
