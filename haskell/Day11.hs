@@ -2,7 +2,7 @@ import Data.List (transpose, tails)
 
 type Point = (Int, Int)
 
-emptyScaler = 1000000 - 1
+partTwoScaler = 1000000 - 1
 
 main = do
     input <- lines <$> readFile "inputs/11.txt"
@@ -12,7 +12,7 @@ main = do
         combinations = twoCombinations grid
 
     print $ sum $ map (calcDistance 1 emptyRows emptyColumns) combinations
-    print $ sum $ map (calcDistance emptyScaler emptyRows emptyColumns) combinations
+    print $ sum $ map (calcDistance partTwoScaler emptyRows emptyColumns) combinations
 
 calcDistance :: Int -> [Int] -> [Int] -> (Point, Point) -> Int
 calcDistance scaler emptyRows emptyColumns (a@(x1, y1), b@(x2, y2)) = dist + rowsBetween + columnsBetween
@@ -21,7 +21,7 @@ calcDistance scaler emptyRows emptyColumns (a@(x1, y1), b@(x2, y2)) = dist + row
           columnsBetween = scaler * length (filter (isBetween x1 x2) emptyColumns)
 
 isBetween :: Int -> Int -> Int -> Bool
-isBetween x y a = a > min x y && a < max x y
+isBetween x y val = val > min x y && val < max x y
 
 createGrid :: [[Char]] -> [(Point, Char)]
 createGrid chars = [((x, y), c) | (y, row) <- zip [0..] chars, (x, c) <- zip [0..] row]
