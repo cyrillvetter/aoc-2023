@@ -51,7 +51,7 @@ getMainLoop grid pipeMap width height = followMainLoop start connectedPipe pipeM
           connectedPipe = head $ filter (\p -> start `elem` getNeighbours p (pipeMap M.! p)) startNeighbourPipes
 
 expandOuter :: [[Char]] -> [[Char]]
-expandOuter l = map (++ ".") l ++ [replicate (length (head l)) '.']
+expandOuter l = map (++ ".") l ++ [replicate (length (head l) + 1) '.']
 
 scale :: [[Char]] -> [[Char]]
 scale = transpose . map (addBefore upReplace) . transpose . map (addBefore leftReplace)
