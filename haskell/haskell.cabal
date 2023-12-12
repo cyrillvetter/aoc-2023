@@ -68,3 +68,7 @@ executable 10
 executable 11
     import:  day
     main-is: Day11.hs
+
+executable 12
+    import:  day
+    main-is: Day12.hs
