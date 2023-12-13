@@ -1,6 +1,6 @@
 import Data.List.Split (splitOn)
 import Data.List (transpose, find)
-import Data.Maybe (fromJust, fromMaybe, mapMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 
 main = do
     input <- map lines . splitOn "\n\n" <$> readFile "inputs/13.txt"
