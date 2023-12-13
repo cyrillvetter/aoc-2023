@@ -1,28 +1,54 @@
 import Data.List.Split (splitOn)
-import Data.List (group)
-import qualified Data.Set as S
+import Data.List (group, intercalate)
+import Data.Maybe (isJust, fromJust)
+import qualified Data.Map.Strict as M
+
+type Memo = (String, [Int])
 
 main = do
     input <- map parseLine . lines <$> readFile "inputs/12.txt"
-    print $ sum $ map (uncurry (computeArrangements "")) input
+    print $ sum $ map countArrangements input
+    print $ sum $ map (countArrangements . unfold) input
 
-reduceDots :: String -> String
-reduceDots = concatMap (\l -> if head l == '.' then "." else l) . group
+countArrangements :: (String, [Int]) -> Int
+countArrangements (arr, groups) = fst $ memoizedCountArrangements arr groups M.empty
 
-isValidArrangements :: String -> [Int] -> Bool
-isValidArrangements arr groups = groups == map length (filter ((== '#') . head) (group arr))
+memoizedCountArrangements :: String -> [Int] -> M.Map Memo Int -> (Int, M.Map Memo Int)
+memoizedCountArrangements [] [] mem = (1, mem) -- no springs and no groups left
+memoizedCountArrangements [] _ mem = (0, mem) -- remaining groups but no springs
+memoizedCountArrangements rest [] mem
+    | '#' `elem` rest = (0, mem) -- no groups left but there are still damaged springs
+    | otherwise = (1, mem) -- no groups and no damaged springs left
+memoizedCountArrangements ('.':xs) groups mem = memoizedCountArrangements xs groups mem
+memoizedCountArrangements rest@('#':xs) groups@(g:gs) mem
+    | isJust memoizedRes = (fromJust memoizedRes, mem) -- reuse already calculated result
+    | not (isArrangementValid curr g) = memoize 0 -- invalid arrangement
+    | null nextRest && null gs = memoize 1 -- valid arrangement and the last group to check
+    | null nextRest && not (null gs) = memoize 0 -- valid arrangement but no springs left
+    | head nextRest == '#' = memoize 0 -- no separator between current and next group
+    | otherwise = memoizedCountArrangements (tail nextRest) gs mem -- continue with the remaining groups
+    where key = (rest, groups)
+          memoizedRes = key `M.lookup` mem
+          curr = take g rest
+          nextRest = drop g rest
+          memoize v = (v, M.insert key v mem)
+memoizedCountArrangements rest@('?':xs) groups mem
+    | isJust memoizedRes = (fromJust memoizedRes, mem)
+    | otherwise = (result, M.insert key result hashMem)
+    where key = (rest, groups)
+          memoizedRes = key `M.lookup` mem
+          (dotResult, dotMem) = memoizedCountArrangements ('.' : xs) groups mem
+          (wildResult, hashMem) = memoizedCountArrangements ('#' : xs) groups dotMem
+          result = dotResult + wildResult
 
-computeArrangements :: String -> String -> [Int] -> Int
-computeArrangements from rest groups
-    | null restPart = if isValidArrangements fromToNext groups then 1 else 0
-    | otherwise = dotResult + wildResult
-    where (until, restPart) = span (/= '?') rest
-          fromToNext = from ++ until
-          toEnd = tail restPart
-          dotResult = computeArrangements (fromToNext ++ ".") toEnd groups
-          wildResult = computeArrangements (fromToNext ++ "#") toEnd groups
+isArrangementValid :: String -> Int -> Bool
+isArrangementValid arr grp = grp == length (filter (/= '.') arr)
 
-parseLine :: String -> (String, [Int])
-parseLine l = (reduceDots springs, groups)
+unfold :: Memo -> Memo
+unfold (a, g) = (intercalate "?" $ rep a, concat $ rep g)
+    where rep = replicate 5
+
+parseLine :: String -> Memo
+parseLine l = (springs, groups)
     where [springs, groupPart] = words l
           groups = map read $ splitOn "," groupPart
