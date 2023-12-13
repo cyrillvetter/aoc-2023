@@ -21,17 +21,13 @@ memoizedCountArrangements rest [] mem
     | otherwise = (1, mem) -- no groups and no damaged springs left
 memoizedCountArrangements ('.':xs) groups mem = memoizedCountArrangements xs groups mem
 memoizedCountArrangements rest@('#':xs) groups@(g:gs) mem
-    | isJust memoizedRes = (fromJust memoizedRes, mem) -- reuse already calculated result
-    | not (isArrangementValid curr g) = memoize 0 -- invalid arrangement
-    | null nextRest && null gs = memoize 1 -- valid arrangement and the last group to check
-    | null nextRest && not (null gs) = memoize 0 -- valid arrangement but no springs left
-    | head nextRest == '#' = memoize 0 -- no separator between current and next group
+    | not (isArrangementValid curr g) = (0, mem) -- invalid arrangement
+    | null nextRest && null gs = (1, mem) -- valid arrangement and no more groups to check
+    | null nextRest && not (null gs) = (0, mem) -- valid arrangement but no springs left
+    | head nextRest == '#' = (0, mem) -- no separator between current and next group
     | otherwise = memoizedCountArrangements (tail nextRest) gs mem -- continue with the remaining groups
-    where key = (rest, groups)
-          memoizedRes = key `M.lookup` mem
-          curr = take g rest
+    where curr = take g rest
           nextRest = drop g rest
-          memoize v = (v, M.insert key v mem)
 memoizedCountArrangements rest@('?':xs) groups mem
     | isJust memoizedRes = (fromJust memoizedRes, mem)
     | otherwise = (result, M.insert key result hashMem)
