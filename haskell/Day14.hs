@@ -6,12 +6,12 @@ repetitions = 1000000000
 main = do
     input <- lines <$> readFile "inputs/14.txt"
     print $ calcNorthWeight $ map tilt $ transpose input
-    print $ getWeightAfterRepetitions input M.empty 1
+    print $ repeatUntil input M.empty 1
 
-getWeightAfterRepetitions :: [String] -> M.Map [String] Int -> Int -> Int
-getWeightAfterRepetitions grid seen num = case cycled `M.lookup` seen of
+repeatUntil :: [String] -> M.Map [String] Int -> Int -> Int
+repeatUntil grid seen num = case cycled `M.lookup` seen of
     Just loopStart -> getNthCycleWeight $ loopStart + (repetitions - loopStart) `mod` (num - loopStart)
-    Nothing        -> getWeightAfterRepetitions cycled (M.insert cycled num seen) (num + 1)
+    Nothing        -> repeatUntil cycled (M.insert cycled num seen) (num + 1)
     where cycled = tiltCycle grid
           nextSeen = M.insert cycled num seen
           getNthCycleWeight i = calcNorthWeight $ transpose $ fst $ head $ dropWhile ((/= i) . snd) $ M.assocs nextSeen

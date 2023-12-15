@@ -7,7 +7,6 @@ type Lens = (String, Int)
 
 main = do
     input <- splitOn "," <$> readFile "inputs/15.txt"
-    print $ hash "qp"
     print $ sum $ map hash input
     print $ configureLenses input $ M.fromAscList $ map (\v -> (v, [])) [0..255]
 
