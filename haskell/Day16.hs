@@ -8,8 +8,7 @@ data Direction = R | D | L | U deriving (Enum, Eq, Ord)
 main = do
     input <- lines <$> readFile "inputs/16.txt"
     let grid = M.fromList $ createGrid input
-        origin = ((0, 0), R)
-    print $ followBeams [origin] grid S.empty
+    print $ followBeams [((0, 0), R)] grid S.empty
     print $ maximum $ map (\s -> followBeams [s] grid S.empty) $ startingDirections $ length input
 
 startingDirections :: Int -> [Movement]
@@ -25,41 +24,42 @@ followBeams [] _ visited = S.size $ S.map fst visited
 followBeams (m@(p, dir):ms) grid visited
     | m `S.member` visited = followBeams ms grid visited
     | otherwise = case p `M.lookup` grid of
-        Just c  -> followBeams (getNextMoves ms m c) grid (m `S.insert` visited)
+        Just c  -> followBeams (getNextMoves m c ++ ms) grid (m `S.insert` visited)
         Nothing -> followBeams ms grid visited
 
-getNextMoves :: [Movement] -> Movement -> Char -> [Movement]
-getNextMoves moves curr n
-    | n == '.' = handleEmpty curr : moves
-    | n == '\\' || n == '/' = handleMirror curr n : moves
-    | otherwise = handleSplitter curr n ++ moves
+getNextMoves :: Movement -> Char -> [Movement]
+getNextMoves (p, dir) c
+    | c == '.' = [move p dir]
+    | c == '\\' || c == '/' = [move p (handleMirror dir c)]
+    | otherwise = map (move p) $ handleSplitter dir c
 
-handleEmpty :: Movement -> Movement
-handleEmpty ((x, y), dir)
-    | dir == R = ((x + 1, y), dir)
-    | dir == D = ((x, y + 1), dir)
-    | dir == L = ((x - 1, y), dir)
-    | dir == U = ((x, y - 1), dir)
+handleMirror :: Direction -> Char -> Direction
+handleMirror dir '/' = case dir of
+    R -> U
+    U -> R
+    L -> D
+    D -> L
+handleMirror dir '\\' = case dir of
+    R -> D
+    D -> R
+    L -> U
+    U -> L
 
-handleMirror :: Movement -> Char -> Movement
-handleMirror ((x, y), dir) '/'
-    | dir == R = ((x, y - 1), U)
-    | dir == D = ((x - 1, y), L)
-    | dir == L = ((x, y + 1), D)
-    | dir == U = ((x + 1, y), R)
-handleMirror ((x, y), dir) '\\'
-    | dir == R = ((x, y + 1), D)
-    | dir == D = ((x + 1, y), R)
-    | dir == L = ((x, y - 1), U)
-    | dir == U = ((x - 1, y), L)
+handleSplitter :: Direction -> Char -> [Direction]
+handleSplitter dir '-' = case dir of
+    R -> [R]
+    L -> [L]
+    _ -> [R, L]
+handleSplitter dir '|' = case dir of
+    U -> [U]
+    D -> [D]
+    _ -> [U, D]
 
-handleSplitter :: Movement -> Char -> [Movement]
-handleSplitter m@((x, y), dir) '-'
-    | dir == R || dir == L = [handleEmpty m]
-    | otherwise = [((x - 1, y), L), ((x + 1, y), R)]
-handleSplitter m@((x, y), dir) '|'
-    | dir == U || dir == D = [handleEmpty m]
-    | otherwise = [((x, y + 1), D), ((x, y - 1), U)]
+move :: Point -> Direction -> Movement
+move (x, y) R = ((x + 1, y), R)
+move (x, y) D = ((x, y + 1), D)
+move (x, y) L = ((x - 1, y), L)
+move (x, y) U = ((x, y - 1), U)
 
 createGrid :: [[Char]] -> [(Point, Char)]
 createGrid chars = [((x, y), c) | (y, row) <- zip [0..] chars, (x, c) <- zip [0..] row]
