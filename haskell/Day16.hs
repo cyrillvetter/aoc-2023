@@ -25,40 +25,40 @@ followBeams [] _ visited = S.size $ S.map fst visited
 followBeams (m@(p, dir):ms) grid visited
     | m `S.member` visited = followBeams ms grid visited
     | otherwise = case p `M.lookup` grid of
-        Just c  -> followBeams (move ms m c) grid (m `S.insert` visited)
+        Just c  -> followBeams (getNextMoves ms m c) grid (m `S.insert` visited)
         Nothing -> followBeams ms grid visited
 
-move :: [Movement] -> Movement -> Char -> [Movement]
-move moves curr n
-    | n == '.' = moveEmpty curr : moves
-    | n == '\\' || n == '/' = moveMirror curr n : moves
-    | otherwise = moveSplitter curr n ++ moves
+getNextMoves :: [Movement] -> Movement -> Char -> [Movement]
+getNextMoves moves curr n
+    | n == '.' = handleEmpty curr : moves
+    | n == '\\' || n == '/' = handleMirror curr n : moves
+    | otherwise = handleSplitter curr n ++ moves
 
-moveEmpty :: Movement -> Movement
-moveEmpty ((x, y), dir)
+handleEmpty :: Movement -> Movement
+handleEmpty ((x, y), dir)
     | dir == R = ((x + 1, y), dir)
     | dir == D = ((x, y + 1), dir)
     | dir == L = ((x - 1, y), dir)
     | dir == U = ((x, y - 1), dir)
 
-moveMirror :: Movement -> Char -> Movement
-moveMirror ((x, y), dir) '/'
+handleMirror :: Movement -> Char -> Movement
+handleMirror ((x, y), dir) '/'
     | dir == R = ((x, y - 1), U)
     | dir == D = ((x - 1, y), L)
     | dir == L = ((x, y + 1), D)
     | dir == U = ((x + 1, y), R)
-moveMirror ((x, y), dir) '\\'
+handleMirror ((x, y), dir) '\\'
     | dir == R = ((x, y + 1), D)
     | dir == D = ((x + 1, y), R)
     | dir == L = ((x, y - 1), U)
     | dir == U = ((x - 1, y), L)
 
-moveSplitter :: Movement -> Char -> [Movement]
-moveSplitter m@((x, y), dir) '-'
-    | dir == R || dir == L = [moveEmpty m]
+handleSplitter :: Movement -> Char -> [Movement]
+handleSplitter m@((x, y), dir) '-'
+    | dir == R || dir == L = [handleEmpty m]
     | otherwise = [((x - 1, y), L), ((x + 1, y), R)]
-moveSplitter m@((x, y), dir) '|'
-    | dir == U || dir == D = [moveEmpty m]
+handleSplitter m@((x, y), dir) '|'
+    | dir == U || dir == D = [handleEmpty m]
     | otherwise = [((x, y + 1), D), ((x, y - 1), U)]
 
 createGrid :: [[Char]] -> [(Point, Char)]
