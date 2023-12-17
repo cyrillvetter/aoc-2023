@@ -1,5 +1,5 @@
 import qualified Data.Set as S
-import qualified Data.Map as M
+import qualified Data.Array.Unboxed as A
 
 type Point = (Int, Int)
 type Movement = (Point, Direction)
@@ -7,7 +7,8 @@ data Direction = R | D | L | U deriving (Enum, Eq, Ord)
 
 main = do
     input <- lines <$> readFile "inputs/16.txt"
-    let grid = M.fromList $ createGrid input
+    let upperBound = length input - 1
+        grid = A.listArray ((0, 0), (upperBound, upperBound)) $ concat input
     print $ followBeams [((0, 0), R)] grid S.empty
     print $ maximum $ map (\s -> followBeams [s] grid S.empty) $ startingDirections $ length input
 
@@ -19,13 +20,14 @@ startingDirections size = top ++ bottom ++ left ++ right
           left = map (\y -> ((0, y), R)) [0..bound]
           right = map (\y -> ((bound, y), L)) [0..bound]
 
-followBeams :: [Movement] -> M.Map Point Char -> S.Set Movement -> Int
+followBeams :: [Movement] -> A.UArray (Int, Int) Char -> S.Set Movement -> Int
 followBeams [] _ visited = S.size $ S.map fst visited
-followBeams (m@(p, dir):ms) grid visited
-    | m `S.member` visited = followBeams ms grid visited
-    | otherwise = case p `M.lookup` grid of
-        Just c  -> followBeams (getNextMoves m c ++ ms) grid (m `S.insert` visited)
-        Nothing -> followBeams ms grid visited
+followBeams (m@((x, y), dir):ms) grid visited
+    | isOutOfBounds || m `S.member` visited = followBeams ms grid visited
+    | otherwise = followBeams (getNextMoves m val ++ ms) grid (m `S.insert` visited)
+    where (_, (_, upper)) = A.bounds grid
+          isOutOfBounds = x < 0 || x > upper || y < 0 || y > upper
+          val = grid A.! (y, x)
 
 getNextMoves :: Movement -> Char -> [Movement]
 getNextMoves (p, dir) c
@@ -60,6 +62,3 @@ move (x, y) R = ((x + 1, y), R)
 move (x, y) D = ((x, y + 1), D)
 move (x, y) L = ((x - 1, y), L)
 move (x, y) U = ((x, y - 1), U)
-
-createGrid :: [[Char]] -> [(Point, Char)]
-createGrid chars = [((x, y), c) | (y, row) <- zip [0..] chars, (x, c) <- zip [0..] row]
