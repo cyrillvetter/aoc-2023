@@ -1,5 +1,6 @@
 import Data.List (transpose)
-import qualified Data.Map as M
+import Data.Tuple (swap)
+import qualified Data.Array.Unboxed as A
 import qualified Data.Set as S
 
 type Point = (Int, Int)
@@ -13,22 +14,20 @@ neighbours = [up, down, left, right]
 
 main = do
     input <- expandOuter . scale . lines <$> readFile "inputs/10.txt"
-    let grid = createGrid input
-        width = length (head input)
-        height = length input
-        pipeMap = M.fromList grid
-        loopPath = getMainLoop grid pipeMap width height
-        floodedElements = floodFillOuter [(0, 0)] width height loopPath
-        inner = filter (\(p, c) -> p `S.notMember` floodedElements) grid
+    let upperBound = length input - 1
+        grid = A.listArray ((0, 0), (upperBound, upperBound)) $ concat input
+        loopPath = getMainLoop grid upperBound
+        floodedElements = floodFillOuter [(0, 0)] upperBound loopPath
+        inner = filter (\(p, c) -> p `S.notMember` floodedElements) $ A.assocs grid
 
     print $ S.size loopPath `div` 4
     print $ (`countElements` 0) $ map fst inner
 
-followMainLoop :: Point -> Point -> M.Map Point Char -> S.Set Point -> S.Set Point
-followMainLoop prev curr pipes visited
+followMainLoop :: Point -> Point -> A.UArray (Int, Int) Char -> S.Set Point -> S.Set Point
+followMainLoop prev curr@(x, y) pipes visited
     | currPipe == 'S' = visited
     | otherwise = followMainLoop curr next pipes (S.insert curr visited)
-    where currPipe = pipes M.! curr
+    where currPipe = pipes A.! (y, x)
           test = filter (/= prev) $ getNeighbours curr currPipe
           next = head test
 
@@ -37,18 +36,18 @@ countElements [] count = count
 countElements ((x, y):ps) count = countElements ps val
     where val = if odd x && odd y then count + 1 else count
 
-floodFillOuter :: [Point] -> Int -> Int -> S.Set Point -> S.Set Point
-floodFillOuter [] _ _ visited = visited
-floodFillOuter (p:ps) width height visited
-    | p `S.member` visited = floodFillOuter ps width height visited
-    | otherwise = floodFillOuter (ps ++ n) width height (S.insert p visited)
-    where n = filter (\e -> isInBound e width height && e `S.notMember` visited) $ map (addPoints p) neighbours
+floodFillOuter :: [Point] -> Int -> S.Set Point -> S.Set Point
+floodFillOuter [] _ visited = visited
+floodFillOuter (p:ps) upperBound visited
+    | p `S.member` visited = floodFillOuter ps upperBound visited
+    | otherwise = floodFillOuter (ps ++ n) upperBound (S.insert p visited)
+    where n = filter (\e -> isInBound e upperBound && e `S.notMember` visited) $ map (addPoints p) neighbours
 
-getMainLoop :: [(Point, Char)] -> M.Map Point Char -> Int -> Int -> S.Set Point
-getMainLoop grid pipeMap width height = followMainLoop start connectedPipe pipeMap (S.singleton start)
-    where start = fst $ head $ filter ((== 'S') . snd) grid
-          startNeighbourPipes = filter (\p -> isInBound p width height) $ map (addPoints start) neighbours
-          connectedPipe = head $ filter (\p -> start `elem` getNeighbours p (pipeMap M.! p)) startNeighbourPipes
+getMainLoop :: A.UArray (Int, Int) Char -> Int -> S.Set Point
+getMainLoop pipes upperBound = followMainLoop start connectedPipe pipes (S.singleton start)
+    where start = swap $ fst $ head $ filter ((== 'S') . snd) $ A.assocs pipes
+          startNeighbourPipes = filter (`isInBound` upperBound) $ map (addPoints start) neighbours
+          connectedPipe = head $ filter (\p@(x, y) -> start `elem` getNeighbours p (pipes A.! (y, x))) startNeighbourPipes
 
 expandOuter :: [[Char]] -> [[Char]]
 expandOuter l = map (++ ".") l ++ [replicate (length (head l) + 1) '.']
@@ -69,8 +68,8 @@ leftReplace c
     | c == '-' || c == 'J' || c == '7' = '-'
     | otherwise = '.'
 
-isInBound :: Point -> Int -> Int -> Bool
-isInBound (x, y) width height = x >= 0 && y >= 0 && x < width && y < height
+isInBound :: Point -> Int -> Bool
+isInBound (x, y) upperBound = x >= 0 && y >= 0 && x <= upperBound && y <= upperBound
 
 getNeighbours :: Point -> Char -> [Point]
 getNeighbours curr = map (addPoints curr) . getConnectingPipes
@@ -86,6 +85,3 @@ getConnectingPipes _ = []
 
 addPoints :: Point -> Point -> Point
 addPoints (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
-
-createGrid :: [[Char]] -> [(Point, Char)]
-createGrid chars = [((x, y), c) | (y, row) <- zip [0..] chars, (x, c) <- zip [0..] row]
