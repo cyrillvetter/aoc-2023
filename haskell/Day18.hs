@@ -1,34 +1,31 @@
-{-# LANGUAGE TupleSections #-}
-
-import qualified Data.Set as S
-import Data.Bifunctor (bimap)
-
-type Point = (Int, Int)
-
-neighbours = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
 main = do
     input <- lines <$> readFile "inputs/18.txt"
-    let trench = buildTrench input (0, 0)
-        (topLeftX, topLeftY) = S.findMin trench
-    print $ floodFill [(topLeftX + 1, topLeftY + 1)] trench
+    print $ getTotalSize parseP1 input
+    print $ getTotalSize parseP2 input
 
-buildTrench :: [String] -> Point -> S.Set Point
-buildTrench [] _ = S.empty
-buildTrench (x:xs) p = S.union (S.fromList movements) $ buildTrench xs endPoint
-    where (dir:steps:_) = words x
-          movements = move p (read steps) (head dir)
-          endPoint = last movements
+moveDirection :: (Int, Int) -> (Char, Int) -> (Int, Int)
+moveDirection (x, y) (dir, steps)
+    | dir == 'R' || dir == '0' = (x + steps, y)
+    | dir == 'L' || dir == '2' = (x - steps, y)
+    | dir == 'U' || dir == '3' = (x, y - steps)
+    | dir == 'D' || dir == '1' = (x, y + steps)
 
-floodFill :: [Point] -> S.Set Point -> Int
-floodFill [] visited = S.size visited
-floodFill (p@(x, y):ps) visited
-    | p `S.member` visited = floodFill ps visited
-    | otherwise = floodFill (nearest ++ ps) (p `S.insert` visited)
-    where nearest = map (bimap (x +) (y +)) neighbours
+getTotalSize :: (String -> (Char, Int)) -> [String] -> Int
+getTotalSize parser input = trenchSize parsed + shoelace (scanl moveDirection (0, 0) parsed)
+    where parsed = map parser input
 
-move :: Point -> Int -> Char -> [Point]
-move (x, y) steps 'R' = map (,y) [x..x+steps]
-move (x, y) steps 'L' = map (,y) [x,x-1..x-steps]
-move (x, y) steps 'D' = map (x,) [y..y+steps]
-move (x, y) steps 'U' = map (x,) [y,y-1..y-steps]
+shoelace :: [(Int, Int)] -> Int
+shoelace ps = abs (sum $ zipWith (\(x1, y1) (x2, y2) -> (y1 + y2) * (x1 - x2)) (tail ps) ps) `div` 2
+
+trenchSize :: [(Char, Int)] -> Int
+trenchSize = (+ 1) . (`div` 2) . sum . map snd
+
+parseP1 :: String -> (Char, Int)
+parseP1 s = (head dir, read num)
+    where (dir:num:_) = words s
+
+parseP2 :: String -> (Char, Int)
+parseP2 s = (last color, num)
+    where colorPart = last $ words s
+          color = drop 2 $ init colorPart
+          num = (read . ("0x" ++)) $ init color
