@@ -88,3 +88,8 @@ executable 15
 executable 16
     import:  day
     main-is: Day16.hs
+
+executable 17
+    import:  day
+    build-depends: pqueue
+    main-is: Day17.hs
