@@ -10,12 +10,12 @@ main = do
     let bound = length input - 1
         grid = A.listArray ((0, 0), (bound, bound)) $ concat input
         start = S.singleton $ fst $ head $ filter ((== 'S') . snd) $ A.assocs grid
-    print $ S.size (iterate (\p -> step (getNeighbours $ S.toList p) grid S.empty) start !! 64)
+    print $ S.size $ iterate (\p -> step (getNeighbours $ S.toList p) grid S.empty) start !! 64
 
 step :: [Point] -> A.UArray Point Char -> S.Set Point -> S.Set Point
 step [] _ visited = visited
 step (p:ps) grid visited
-    | isOutOfBounds p bound || tile == '#' || p `S.member` visited = step ps grid visited
+    | isOutOfBounds p bound || tile == '#' = step ps grid visited
     | otherwise = step ps grid (p `S.insert` visited)
     where (_, (_, bound)) = A.bounds grid
           tile = grid A.! p
