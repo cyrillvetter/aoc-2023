@@ -1,46 +1,45 @@
 import Data.List.Split (splitOn)
 import Data.Bifunctor (second)
 import qualified Data.Map as M
-import Debug.Trace (trace)
 
-type Element = (String, Pulse)
 data Pulse = High | Low deriving (Enum, Eq, Show)
 data Module = Broadcaster [String] | FlipFlop Bool [String] | Conjunction [Element] [String] deriving (Show)
+type Element = (String, Pulse)
+type ModuleMap = M.Map String Module
 
-startName = "broadcaster"
+repetitions = 1000
 
 main = do
     input <- map parseModule . lines <$> readFile "inputs/20.txt"
-    let modules = setConjuntionInputs input $ map (second getOutputs) input
-        moduleMap = M.fromList modules
-        broadcast = map (\s -> (startName, (s, Low))) $ getOutputs $ snd $ head $ filter ((== startName) . fst) modules
-    print $ repeatProcess broadcast moduleMap
+    let modules = M.fromList $ setConjuntionInputs input $ map (second getOutputs) input
+    print $ repeatProcess modules
 
-repeatProcess :: [(String, Element)] -> M.Map String Module -> Int
-repeatProcess start modules = low * high
-    where (_, (low, high)) = iterate (\(m, (low, high)) -> process start m (low + 1, high)) (modules, (0, 0)) !! 1000
+repeatProcess :: ModuleMap -> Int
+repeatProcess modules = low * high
+    where (low, high) = snd $ iterate (uncurry (process [("button", ("broadcaster", Low))])) (modules, (0, 0)) !! repetitions
 
-process :: [(String, Element)] -> M.Map String Module -> (Int, Int) -> (M.Map String Module, (Int, Int))
+process :: [(String, Element)] -> ModuleMap -> (Int, Int) -> (ModuleMap, (Int, Int))
 process [] modules count = (modules, count)
-process ((prev, (name, pulse)):es) modules count@(low, high) = case element of
-    Just (FlipFlop on out)        -> handleFlipFlop pulse name on out es modules count
-    Just (Conjunction memory out) -> handleConjunction pulse prev name memory out es modules count
-    _                             -> process es modules (if pulse == Low then (low + 1, high) else (low, high + 1))
-    where element = name `M.lookup` modules
+process ((src, (dest, pulse)):rest) modules (low, high) = case element of
 
-handleFlipFlop :: Pulse -> String -> Bool -> [String] -> [(String, Element)] -> M.Map String Module -> (Int, Int) -> (M.Map String Module, (Int, Int))
-handleFlipFlop High _ _ _ remaining modules (low, high) = process remaining modules (low, high + 1)
-handleFlipFlop Low name on out remaining modules (low, high) = process (remaining ++ outPulse) adjustedModules (low + 1, high)
-    where adjustedModules = M.adjust (\(FlipFlop on out) -> FlipFlop (not on) out) name modules
-          outPulse = map (\o -> (name, (o, if on then Low else High))) out
+    Just (Broadcaster out) -> process (rest ++ next pulse out) modules nextCount
 
-handleConjunction :: Pulse -> String -> String -> [Element] -> [String] -> [(String, Element)] -> M.Map String Module -> (Int, Int) -> (M.Map String Module, (Int, Int))
-handleConjunction pulse prev name memory out remaining modules (low, high) = process (remaining ++ outPulse) adjustedModules nextCount
-    where nextCount = if pulse == High then (low, high + 1) else (low + 1, high)
-          adjustedMemory = map (\m@(name, _) -> if name == prev then (prev, pulse) else m) memory
-          adjustedModules = M.adjust (\(Conjunction _ out) -> Conjunction adjustedMemory out) name modules
-          isNextPulseLow = all ((== High) . snd) adjustedMemory
-          outPulse = map (\o -> (name, (o, if isNextPulseLow then Low else High))) out
+    Just (FlipFlop on out)
+        | pulse == High -> process rest modules nextCount
+        | otherwise -> process (rest ++ next nextPulse out) adjustedModules nextCount
+        where adjustedModules = M.adjust (\(FlipFlop on out) -> FlipFlop (not on) out) dest modules
+              nextPulse = if on then Low else High
+
+    Just (Conjunction memory out) -> process (rest ++ next nextPulse out) adjustedModules nextCount
+        where adjustedMemory = map (\m@(name, _) -> if name == src then (src, pulse) else m) memory
+              adjustedModules = M.adjust (\(Conjunction _ out) -> Conjunction adjustedMemory out) dest modules
+              nextPulse = if all ((== High) . snd) adjustedMemory then Low else High
+
+    _ -> process rest modules nextCount
+
+    where element = dest `M.lookup` modules
+          nextCount = if pulse == High then (low, high + 1) else (low + 1, high)
+          next pulse = map (\name -> (dest, (name, pulse)))
 
 getOutputs :: Module -> [String]
 getOutputs (Broadcaster out) = out
