@@ -1,7 +1,7 @@
 main = do
     input <- lines <$> readFile "inputs/18.txt"
-    print $ getTotalSize parseP1 input
-    print $ getTotalSize parseP2 input
+    print $ getTotalSize $ map parseP1 input
+    print $ getTotalSize $ map parseP2 input
 
 moveDirection :: (Int, Int) -> (Char, Int) -> (Int, Int)
 moveDirection (x, y) (dir, steps)
@@ -10,13 +10,14 @@ moveDirection (x, y) (dir, steps)
     | dir == 'U' || dir == '3' = (x, y - steps)
     | dir == 'D' || dir == '1' = (x, y + steps)
 
-getTotalSize :: (String -> (Char, Int)) -> [String] -> Int
-getTotalSize parser input = trenchSize parsed + shoelace (scanl moveDirection (0, 0) parsed)
-    where parsed = map parser input
+getTotalSize :: [(Char, Int)] -> Int
+getTotalSize input = trenchSize input + shoelace (scanl moveDirection (0, 0) input)
 
+-- Shoelace formula
 shoelace :: [(Int, Int)] -> Int
 shoelace ps = abs (sum $ zipWith (\(x1, y1) (x2, y2) -> (y1 + y2) * (x1 - x2)) (tail ps) ps) `div` 2
 
+-- Pick's theorem
 trenchSize :: [(Char, Int)] -> Int
 trenchSize = (+ 1) . (`div` 2) . sum . map snd
 
